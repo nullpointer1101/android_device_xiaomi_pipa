@@ -16,6 +16,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -49,6 +50,8 @@ public class PenChargingService extends Service {
     private static final long POLL_INTERVAL_ACTIVE_MS = 1200L; // 1.2s snappy polling while screen is on
     private static final long NINETY_NINE_TO_FULL_MS = 60000L; // 1 minute
     private static final int BATTERY_LEVEL_UNKNOWN = Integer.MIN_VALUE;
+    private static final int LOW_BATTERY_THRESHOLD = 15;
+    private static final int CRITICAL_BATTERY_THRESHOLD = 5;
 
     public static final String PREF_STYLUS_CHARGING_NOTIF = "stylus_charging_notification_key";
 
@@ -61,8 +64,6 @@ public class PenChargingService extends Service {
     private boolean mIsMonitoring = false;
     private boolean mWasCharging = false;
     private boolean mHasShown100PercentPopup = false;
-    private boolean mHasWarnedLow = false;
-    private boolean mHasWarnedCritical = false;
     private int mLastBatteryLevel = BATTERY_LEVEL_UNKNOWN;
     private Long mFirstSeen99AtMs = null;
 
@@ -202,6 +203,7 @@ public class PenChargingService extends Service {
             mHandler.removeCallbacks(mPollRunnable);
             hideNotification();
             mPillController.hidePill();
+            PenChargingManager.resetDetectionState();
             mWasCharging = false;
             mHasShown100PercentPopup = false;
             mLastBatteryLevel = BATTERY_LEVEL_UNKNOWN;
@@ -213,9 +215,16 @@ public class PenChargingService extends Service {
         BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice.class);
         String name = (device != null && device.getName() != null) ? device.getName() : null;
         PenChargingManager.PenChargingStatus status = PenChargingManager.getStatus(this);
-        int level = (status != null && status.batteryLevel >= 0) ? status.batteryLevel : -1;
 
-        if (status != null && status.isCharging) {
+        // ACTION_ACL_CONNECTED fires for every Bluetooth device (earbuds,
+        // watches, ...). Only react when the wireless charging hardware has
+        // actually confirmed a stylus on the pill.
+        if (status == null || !status.isConnected) {
+            return;
+        }
+
+        int level = status.batteryLevel;
+        if (status.isCharging) {
             mPillController.showPopup(level >= 100 ? StylusState.FULLY_CHARGED : StylusState.CHARGING, level, name);
         } else {
             mPillController.showPopup(StylusState.CONNECTED, level, name);
@@ -255,13 +264,19 @@ public class PenChargingService extends Service {
         PenChargingManager.PenChargingStatus status = PenChargingManager.getStatus(this);
         if (status == null || !status.isConnected || !status.isCharging) {
             if (mWasCharging) {
-                Log.i(TAG, "Stylus detached -> Triggering disconnected popup and removing notification");
-                mPillController.showPopup(StylusState.DISCONNECTED, mLastBatteryLevel, null);
+                // Warn about a nearly empty stylus right when it is detached,
+                // that is the moment the user can still react to it.
+                StylusState detachState = StylusState.DISCONNECTED;
+                if (mLastBatteryLevel >= 0 && mLastBatteryLevel <= CRITICAL_BATTERY_THRESHOLD) {
+                    detachState = StylusState.CRITICAL_BATTERY;
+                } else if (mLastBatteryLevel >= 0 && mLastBatteryLevel <= LOW_BATTERY_THRESHOLD) {
+                    detachState = StylusState.LOW_BATTERY;
+                }
+                Log.i(TAG, "Stylus detached -> Triggering " + detachState + " popup and removing notification");
+                mPillController.showPopup(detachState, mLastBatteryLevel, null);
                 hideNotification();
                 mWasCharging = false;
                 mHasShown100PercentPopup = false;
-                mHasWarnedLow = false;
-                mHasWarnedCritical = false;
                 mLastBatteryLevel = BATTERY_LEVEL_UNKNOWN;
                 mFirstSeen99AtMs = null;
             }
@@ -351,17 +366,24 @@ public class PenChargingService extends Service {
             content = getString(R.string.pen_charging_notification_content_unknown);
         }
 
-        Notification notification = new Notification.Builder(this, CHANNEL_ID)
+        Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_stylus_charging)
                 .setContentTitle(title)
                 .setContentText(content)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
+                .setShowWhen(false)
+                .setColor(batteryLevel >= 0 && batteryLevel < 100
+                        ? Color.rgb(48, 209, 88)
+                        : Color.rgb(142, 142, 147))
                 .setCategory(Notification.CATEGORY_STATUS)
-                .setVisibility(Notification.VISIBILITY_PUBLIC)
-                .build();
+                .setVisibility(Notification.VISIBILITY_PUBLIC);
 
-        mNotificationManager.notify(NOTIFICATION_ID, notification);
+        if (batteryLevel >= 0 && batteryLevel <= 100) {
+            builder.setProgress(100, batteryLevel, false);
+        }
+
+        mNotificationManager.notify(NOTIFICATION_ID, builder.build());
     }
 
     private void hideNotification() {

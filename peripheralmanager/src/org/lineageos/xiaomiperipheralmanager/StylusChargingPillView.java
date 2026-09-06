@@ -6,6 +6,7 @@
 
 package org.lineageos.xiaomiperipheralmanager;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -18,6 +19,7 @@ import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.util.AttributeSet;
 import android.view.View;
+import android.view.animation.AccelerateDecelerateInterpolator;
 
 /**
  * Custom Canvas-based Stylus Charging Pill View with Liquid-Glass Capsule Design.
@@ -85,6 +87,9 @@ public class StylusChargingPillView extends View {
             StylusPopupState.UNKNOWN
     );
 
+    private ValueAnimator glowAnimator;
+    private float glowPulse = 1f;
+
     public StylusChargingPillView(Context context) {
         this(context, null);
     }
@@ -121,7 +126,7 @@ public class StylusChargingPillView extends View {
         subtitlePaint.setColor(Color.argb(175, 255, 255, 255));
 
         percentagePaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
-        percentagePaint.setTextSize(dp(11.5f));
+        percentagePaint.setTextSize(dp(13f));
         percentagePaint.setTextAlign(Paint.Align.CENTER);
         percentagePaint.setColor(Color.WHITE);
 
@@ -146,7 +151,43 @@ public class StylusChargingPillView extends View {
 
     public void setModel(StylusPopupModel newModel) {
         this.model = newModel;
+        updateGlowAnimation();
         invalidate();
+    }
+
+    /**
+     * Pulses the charging glow while actively charging (OEM pill style).
+     * Fully charged and other states keep a steady glow or none at all.
+     */
+    private void updateGlowAnimation() {
+        boolean activelyCharging = model.state == StylusPopupState.CHARGING;
+
+        if (activelyCharging) {
+            if (glowAnimator != null) return;
+            glowAnimator = ValueAnimator.ofFloat(0.35f, 1f);
+            glowAnimator.setDuration(1300L);
+            glowAnimator.setRepeatCount(ValueAnimator.INFINITE);
+            glowAnimator.setRepeatMode(ValueAnimator.REVERSE);
+            glowAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+            glowAnimator.addUpdateListener(animation -> {
+                glowPulse = (float) animation.getAnimatedValue();
+                invalidate();
+            });
+            glowAnimator.start();
+        } else if (glowAnimator != null) {
+            glowAnimator.cancel();
+            glowAnimator = null;
+            glowPulse = 1f;
+        }
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        if (glowAnimator != null) {
+            glowAnimator.cancel();
+            glowAnimator = null;
+        }
     }
 
     @Override
@@ -278,8 +319,8 @@ public class StylusChargingPillView extends View {
                 glowCenterY,
                 dp(58f),
                 new int[]{
-                        Color.argb(48, 48, 209, 88),
-                        Color.argb(18, 48, 209, 88),
+                        Color.argb((int) (52 * glowPulse), 48, 209, 88),
+                        Color.argb((int) (20 * glowPulse), 48, 209, 88),
                         Color.TRANSPARENT
                 },
                 new float[]{0f, 0.52f, 1f},
@@ -321,7 +362,7 @@ public class StylusChargingPillView extends View {
 
         // Small icon surface. It is deliberately inside the outer capsule.
         accentPaint.setColor(Color.argb(
-                32,
+                48,
                 Color.red(accentColor),
                 Color.green(accentColor),
                 Color.blue(accentColor)
@@ -507,6 +548,25 @@ public class StylusChargingPillView extends View {
                         accentPaint
                 );
             }
+        }
+
+        // Lightning bolt inside the battery glyph while actively charging
+        if (model.state == StylusPopupState.CHARGING) {
+            float h = body.height();
+            float cx = body.centerX();
+            float cy = body.centerY();
+
+            Path bolt = new Path();
+            bolt.moveTo(cx + h * 0.14f, cy - h * 0.42f);
+            bolt.lineTo(cx - h * 0.26f, cy + h * 0.07f);
+            bolt.lineTo(cx - h * 0.03f, cy + h * 0.07f);
+            bolt.lineTo(cx - h * 0.14f, cy + h * 0.42f);
+            bolt.lineTo(cx + h * 0.26f, cy - h * 0.07f);
+            bolt.lineTo(cx + h * 0.03f, cy - h * 0.07f);
+            bolt.close();
+
+            accentPaint.setColor(Color.argb(235, 255, 255, 255));
+            canvas.drawPath(bolt, accentPaint);
         }
     }
 

@@ -40,6 +40,23 @@ public class PenChargingManager {
     private static final int PEN_VENDOR_ID = 6421;
     private static final int PEN_PRODUCT_ID = 19841;
 
+    // A stylus actually drawing from the reverse-charging coil pulls well over
+    // 100mA. Anything below this threshold is foreign-object probing or
+    // measurement noise and must never count as an attached stylus.
+    private static final int MIN_ATTACH_CURRENT_MA = 20;
+
+    // Consecutive samples required before accepting a state transition. The
+    // service polls getStatus() every ~1.2s while the screen is on, so an
+    // attach needs ~2.4s of sustained electrical activity and a detach needs
+    // ~3.6s of silence. This rejects transient spikes and objects that are
+    // only waved past the pill.
+    private static final int ATTACH_CONFIRM_SAMPLES = 2;
+    private static final int DETACH_CONFIRM_SAMPLES = 3;
+
+    private static int sAttachSamples = 0;
+    private static int sDetachSamples = 0;
+    private static boolean sStylusConfirmed = false;
+
     public static class PenChargingStatus {
         public final boolean isConnected;
         public final boolean isCharging;
@@ -111,22 +128,36 @@ public class PenChargingManager {
             Integer chgMode = readSysfsInt(basePath + "/reverse_chg_mode");
 
             boolean hallAttached = (hall3 != null && hall3 == 1) || (hall4 != null && hall4 == 1);
-            boolean currentFlowing = iout != null && iout > 0;
             boolean modeActive = chgMode != null && chgMode == 1;
-
-            // Connected if magnetically attached or current is actively drawn
-            boolean isConnected = currentFlowing || hallAttached;
-            // Charging if current is flowing, or mode is active while attached
-            boolean isCharging = currentFlowing || (modeActive && hallAttached);
+            // A meaningful sustained load on the coil: a real receiver.
+            boolean currentFlowing = iout != null && iout >= MIN_ATTACH_CURRENT_MA;
 
             // 3. Read battery SoC (Nuvolta IC reverse_pen_soc or capacity)
-            int batteryLevel = -1;
             Integer soc = readSysfsInt(basePath + "/reverse_pen_soc");
             if (soc == null || soc < 0 || soc > 100) {
                 soc = readSysfsInt(basePath + "/capacity");
             }
+            boolean socValid = soc != null && soc >= 0 && soc <= 100;
 
-            if (soc != null && soc >= 0 && soc <= 100) {
+            // The hall sensors trip on *any* magnet near the pill (cases,
+            // coins, toys...), but a stray magnet can neither draw charging
+            // current nor answer the SoC handshake. Attaching therefore
+            // strictly requires real current on the coil; hall state alone is
+            // never enough.
+            //
+            // While attached, a fully charged stylus tapers its current to
+            // almost zero, so it is held connected via its SoC report instead
+            // of being dropped for lack of current.
+            boolean attachEvidence = currentFlowing;
+            boolean holdEvidence = currentFlowing || (socValid && hallAttached && modeActive);
+
+            updateConfirmation(attachEvidence, holdEvidence);
+
+            boolean isConnected = sStylusConfirmed;
+            boolean isCharging = sStylusConfirmed && (currentFlowing || socValid);
+
+            int batteryLevel = -1;
+            if (socValid) {
                 batteryLevel = soc;
             } else if (context != null && isConnected) {
                 // Fallback to InputManager or Bluetooth battery level
@@ -139,7 +170,7 @@ public class PenChargingManager {
             if (DEBUG) {
                 Log.d(TAG, "getStatus(): path=" + basePath + ", iout=" + iout + "mA, soc=" + soc +
                         ", hall3=" + hall3 + ", hall4=" + hall4 + ", chgMode=" + chgMode +
-                        " => isConnected=" + isConnected + ", isCharging=" + isCharging +
+                        " => confirmed=" + isConnected + ", isCharging=" + isCharging +
                         ", battery=" + batteryLevel + "%");
             }
 
@@ -148,6 +179,42 @@ public class PenChargingManager {
             Log.e(TAG, "Failed to read pen charging status", e);
             return null;
         }
+    }
+
+    /**
+     * Debounce state machine: a transition is only accepted after enough
+     * consecutive agreeing samples, so a single noisy reading or an object
+     * briefly waved past the pill never changes the reported state.
+     */
+    private static synchronized void updateConfirmation(boolean attachEvidence,
+                                                        boolean holdEvidence) {
+        if (!sStylusConfirmed) {
+            if (attachEvidence) {
+                if (++sAttachSamples >= ATTACH_CONFIRM_SAMPLES) {
+                    sStylusConfirmed = true;
+                    sAttachSamples = 0;
+                    sDetachSamples = 0;
+                }
+            } else {
+                sAttachSamples = 0;
+            }
+        } else if (holdEvidence) {
+            sDetachSamples = 0;
+        } else if (++sDetachSamples >= DETACH_CONFIRM_SAMPLES) {
+            sStylusConfirmed = false;
+            sAttachSamples = 0;
+            sDetachSamples = 0;
+        }
+    }
+
+    /**
+     * Clears the confirmation state machine. Called when monitoring is paused
+     * so a stale confirmation cannot leak into the next session.
+     */
+    public static synchronized void resetDetectionState() {
+        sAttachSamples = 0;
+        sDetachSamples = 0;
+        sStylusConfirmed = false;
     }
 
     /**
