@@ -1,6 +1,5 @@
 # Audio
 persist.vendor.audio.delta.refresh=true
-persist.vendor.audio.misound.disable=true
 ro.audio.monitorRotation=true
 ro.vendor.audio.enhance.support=false
 ro.vendor.audio.gain.support=true
@@ -52,3 +51,8 @@ ro.bootanim.set_orientation_4630946922172900481=ORIENTATION_90
 
 # Sensors
 persist.vendor.sensors.debug.hal=0
+# Audio
+ro.vendor.audio.smartPA.number=4
+
+# Touch
+ro.vendor.touchfeature.type=43
