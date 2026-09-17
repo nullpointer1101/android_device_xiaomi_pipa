@@ -1,4 +1,4 @@
-# Unpinned firmware from pipa_global-user 14 UKQ1.230917.001 V816.0.7.0.UMZMIXM release-keys
+# Unpinned firmware from pipa_pad_cn-user 14 UKQ1.240624.001 OS2.0.20.0.UMZCNXM release-keys
 
 abl.img
 aop.img
