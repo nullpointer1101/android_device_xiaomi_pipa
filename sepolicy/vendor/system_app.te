@@ -1,4 +1,5 @@
 set_prop(system_app, vendor_pen_prop)
+set_prop(system_app, vendor_keyboard_prop)
 set_prop(system_app, pipacore_prop)
 
 # Allow system_app (PipaCore) to write CPU cpufreq, GPU KGSL, Battery supply nodes, and sconfig
