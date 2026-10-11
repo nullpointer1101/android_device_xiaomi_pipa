@@ -98,10 +98,7 @@ public final class ThermalManager {
 
     private static void writeSconfig(String value) {
         if (FileUtils.fileExists(SCONFIG_PATH)) {
-            boolean success = FileUtils.writeLine(SCONFIG_PATH, value);
-            if (!success) {
-                FileUtils.writeLineShell(SCONFIG_PATH, value);
-            }
+            FileUtils.writeLine(SCONFIG_PATH, value);
         }
     }
 

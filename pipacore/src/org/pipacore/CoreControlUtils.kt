@@ -80,8 +80,8 @@ object CoreControlUtils {
         val value = if (online) "1" else "0"
         val success = FileUtils.writeLine(path, value)
         if (!success) {
-            Log.e(TAG, "Failed to write $value to $path, executing shell command fallback")
-            return FileUtils.executeCommand("echo $value > $path")
+            Log.e(TAG, "Failed to write $value to $path")
+            return false
         }
         return true
     }

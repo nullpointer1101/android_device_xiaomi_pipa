@@ -39,8 +39,8 @@ public final class FileUtils {
             bw.write(value + "\n");
             return true;
         } catch (IOException e) {
-            Log.e(TAG, "writeLine failed: " + path + ", trying shell fallback", e);
-            return writeLineShell(path, value);
+            Log.e(TAG, "writeLine failed: " + path, e);
+            return false;
         }
     }
 
@@ -58,35 +58,5 @@ public final class FileUtils {
             }
         }
         return 0;
-    }
-
-    public static boolean writeLineShell(String path, String value) {
-        try {
-            Process process = Runtime.getRuntime().exec(new String[]{"sh", "-c", "echo " + value + " > " + path});
-            if (process.waitFor() == 0) return true;
-        } catch (Exception ignored) {}
-        try {
-            Process process = Runtime.getRuntime().exec(new String[]{"su", "-c", "echo " + value + " > " + path});
-            process.waitFor();
-            return process.exitValue() == 0;
-        } catch (Exception e) {
-            Log.e(TAG, "writeLineShell failed: " + path, e);
-            return false;
-        }
-    }
-
-    public static boolean executeCommand(String command) {
-        try {
-            Process process = Runtime.getRuntime().exec(new String[]{"sh", "-c", command});
-            if (process.waitFor() == 0) return true;
-        } catch (Exception ignored) {}
-        try {
-            Process process = Runtime.getRuntime().exec(new String[]{"su", "-c", command});
-            process.waitFor();
-            return process.exitValue() == 0;
-        } catch (Exception e) {
-            Log.e(TAG, "executeCommand failed: " + command, e);
-            return false;
-        }
     }
 }
