@@ -102,15 +102,13 @@ public class PenChargingService extends Service {
                 @Override
                 public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
                     if (PREF_STYLUS_CHARGING_NOTIF.equals(key)) {
-                        boolean enabled = prefs.getBoolean(key, true);
+                        boolean enabled = prefs.getBoolean(key, false);
                         if (!enabled) {
                             hideNotification();
-                            mWasCharging = false;
-                            mHasShown100PercentPopup = false;
-                            mLastBatteryLevel = BATTERY_LEVEL_UNKNOWN;
-                            mFirstSeen99AtMs = null;
+                            stopSelf();
                         } else {
                             if (mPowerManager != null && mPowerManager.isInteractive()) {
+                                startMonitoring();
                                 updateChargingStatus();
                             }
                         }
@@ -125,6 +123,14 @@ public class PenChargingService extends Service {
         mPowerManager = getSystemService(PowerManager.class);
         mPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         mPreferences.registerOnSharedPreferenceChangeListener(mPrefListener);
+
+        boolean notifEnabled = mPreferences != null
+                && mPreferences.getBoolean(PREF_STYLUS_CHARGING_NOTIF, false);
+        if (!notifEnabled) {
+            Log.i(TAG, "Stylus charging notification disabled by user, stopping service");
+            stopSelf();
+            return;
+        }
 
         createNotificationChannel();
         mPillController = new StylusPillController(this);
@@ -347,7 +353,7 @@ public class PenChargingService extends Service {
     }
 
     private void showNotification(int batteryLevel) {
-        boolean notifEnabled = mPreferences == null || mPreferences.getBoolean(PREF_STYLUS_CHARGING_NOTIF, true);
+        boolean notifEnabled = mPreferences != null && mPreferences.getBoolean(PREF_STYLUS_CHARGING_NOTIF, false);
         if (!notifEnabled || mNotificationManager == null) {
             hideNotification();
             return;

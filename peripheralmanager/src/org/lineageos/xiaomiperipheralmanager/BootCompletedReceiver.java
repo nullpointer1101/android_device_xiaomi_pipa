@@ -57,11 +57,17 @@ public class BootCompletedReceiver extends BroadcastReceiver {
             logError("Failed to initialize pen service: " + e.getMessage());
         }
 
-        try {
-            PenChargingService.start(context);
-            logInfo("Pen charging service initialized");
-        } catch (Exception e) {
-            logError("Failed to initialize pen charging service: " + e.getMessage());
+        boolean penChargingNotifEnabled = prefs.getBoolean(
+                PenChargingService.PREF_STYLUS_CHARGING_NOTIF, false);
+        if (penChargingNotifEnabled) {
+            try {
+                PenChargingService.start(context);
+                logInfo("Pen charging service initialized (user enabled)");
+            } catch (Exception e) {
+                logError("Failed to initialize pen charging service: " + e.getMessage());
+            }
+        } else {
+            logInfo("Pen charging service skipped (user disabled)");
         }
     }
     

@@ -43,7 +43,7 @@
         android:key="stylus_charging_notification_key"
         android:title="@string/stylus_charging_notification_title"
         android:summary="@string/stylus_charging_notification_summary"
-        android:defaultValue="true" />
+        android:defaultValue="false" />
 
     <com.android.settingslib.widget.FooterPreference
         android:key="footer_key"

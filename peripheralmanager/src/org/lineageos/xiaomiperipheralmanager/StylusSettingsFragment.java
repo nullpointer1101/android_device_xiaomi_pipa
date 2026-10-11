@@ -64,6 +64,7 @@ public class StylusSettingsFragment extends PreferenceFragmentCompat implements
     private MainSwitchPreference mStylusModePref;
     private SwitchPreference     mForceRecognizePref;
     private ListPreference       mRefreshRatePref;
+    private SwitchPreferenceCompat mNotifPref;
     private FooterPreference     mFooterPref;
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
@@ -95,13 +96,12 @@ public class StylusSettingsFragment extends PreferenceFragmentCompat implements
         mStylusModePref     = findPreference(STYLUS_MODE_KEY);
         mForceRecognizePref = findPreference(FORCE_RECOGNIZE_KEY);
         mRefreshRatePref    = findPreference(STYLUS_REFRESH_RATE_KEY);
+        mNotifPref          = findPreference(PenChargingService.PREF_STYLUS_CHARGING_NOTIF);
         mFooterPref         = findPreference(FOOTER_KEY);
 
-        SwitchPreferenceCompat notifPref =
-                findPreference(PenChargingService.PREF_STYLUS_CHARGING_NOTIF);
-        if (notifPref != null) {
-            notifPref.setChecked(
-                    mPrefs.getBoolean(PenChargingService.PREF_STYLUS_CHARGING_NOTIF, true));
+        if (mNotifPref != null) {
+            mNotifPref.setChecked(
+                    mPrefs.getBoolean(PenChargingService.PREF_STYLUS_CHARGING_NOTIF, false));
         }
 
         refreshUI();
@@ -167,6 +167,15 @@ public class StylusSettingsFragment extends PreferenceFragmentCompat implements
                 }
                 // Notify tile so subtitle updates even when QS is closed.
                 notifyTile();
+
+            } else if (PenChargingService.PREF_STYLUS_CHARGING_NOTIF.equals(key)) {
+                boolean enabled = prefs.getBoolean(key, false);
+                logInfo("Stylus charging notification → " + enabled);
+                if (enabled) {
+                    PenChargingService.start(requireContext());
+                } else {
+                    PenChargingService.stop(requireContext());
+                }
             }
 
             refreshUI();
@@ -202,12 +211,17 @@ public class StylusSettingsFragment extends PreferenceFragmentCompat implements
         final boolean stylusMode  = mPrefs.getBoolean(STYLUS_MODE_KEY, false);
         final boolean forceRecog  = mPrefs.getBoolean(FORCE_RECOGNIZE_KEY, false);
         final String  refreshRate = mPrefs.getString(STYLUS_REFRESH_RATE_KEY, RATE_DYNAMIC);
+        final boolean notifEnabled = mPrefs.getBoolean(
+                PenChargingService.PREF_STYLUS_CHARGING_NOTIF, false);
 
         if (mStylusModePref != null && mStylusModePref.isChecked() != stylusMode) {
             mStylusModePref.setChecked(stylusMode);
         }
         if (mForceRecognizePref != null && mForceRecognizePref.isChecked() != forceRecog) {
             mForceRecognizePref.setChecked(forceRecog);
+        }
+        if (mNotifPref != null && mNotifPref.isChecked() != notifEnabled) {
+            mNotifPref.setChecked(notifEnabled);
         }
         if (mRefreshRatePref != null) {
             // Guard setValue(): calling it unconditionally triggers notifyChanged() →
