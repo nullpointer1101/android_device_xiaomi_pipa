@@ -35,6 +35,38 @@ fun DashboardScreen() {
                 subtitle = stringResource(R.string.dashboard_subtitle)
             )
 
+            SectionHeader(title = "Accessories")
+
+            // Xiaomi Smart Pen
+            SettingsNavCard(
+                title = stringResource(R.string.stylus_title),
+                summary = stringResource(R.string.stylus_summary),
+                iconRes = R.drawable.ic_stylus,
+                onClick = {
+                    context.startActivity(Intent(context, StylusActivity::class.java))
+                }
+            )
+
+            // Xiaomi Keyboard
+            SettingsNavCard(
+                title = stringResource(R.string.keyboard_title),
+                summary = stringResource(R.string.keyboard_summary),
+                iconRes = R.drawable.ic_keyboard,
+                onClick = {
+                    context.startActivity(Intent(context, KeyboardActivity::class.java))
+                }
+            )
+
+            // Smart Cover (Lid)
+            SettingsNavCard(
+                title = stringResource(R.string.lid_title),
+                summary = stringResource(R.string.lid_summary),
+                iconRes = R.drawable.ic_lid,
+                onClick = {
+                    context.startActivity(Intent(context, LidActivity::class.java))
+                }
+            )
+
             SectionHeader(title = "Hardware Tuning")
 
             // Core Control

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Copyright (C) 2026 nullpointer1101
+     SPDX-License-Identifier: Apache-2.0
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M20.71,7.04c0.39,-0.39 0.39,-1.02 0,-1.41l-2.34,-2.34c-0.47,-0.47 -1.12,-0.29 -1.41,0l-1.83,1.83 3.75,3.75 1.83,-1.83z"/>
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M3,17.25L3,21h3.75L17.81,9.94l-3.75,-3.75L3,17.25zM5.92,19L5,19v-0.92l9.06,-9.06 0.92,0.92L5.92,19z"/>
+</vector>

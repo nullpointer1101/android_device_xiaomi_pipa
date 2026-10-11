@@ -61,4 +61,43 @@
     <string name="thermal_profile_battery_summary">Aggressive thermal limits to maximize battery life and keep device cool</string>
     <string name="thermal_profile_tile_label">Thermal Profile</string>
     <string name="status_offline">Disabled</string>
+
+    <!-- Accessories -->
+    <string name="accessories_category">Accessories</string>
+
+    <!-- Xiaomi Smart Pen (Stylus) -->
+    <string name="stylus_title">Xiaomi Smart Pen</string>
+    <string name="stylus_summary">Stylus mode, refresh rate, and charging status</string>
+    <string name="stylus_switch_title">Stylus Mode</string>
+    <string name="stylus_switch_summary">Enable stylus hardware support and display synchronization</string>
+    <string name="force_stylus_switch_title">Force Recognize</string>
+    <string name="force_stylus_switch_summary">Allows the official stylus to work without Bluetooth and enables third-party pen support</string>
+    <string name="stylus_refresh_rate_category">Display Refresh Rate</string>
+    <string name="stylus_refresh_rate_title">Display Refresh Rate</string>
+    <string name="stylus_refresh_rate_summary">Select refresh rate target during active pen usage</string>
+    <string name="refresh_rate_dynamic">Dynamic (60/120Hz)</string>
+    <string name="refresh_rate_dynamic_summary">Automatically balances battery and low-latency response</string>
+    <string name="refresh_rate_60hz">Fixed 60Hz</string>
+    <string name="refresh_rate_60hz_summary">Locks display refresh rate to 60Hz</string>
+    <string name="refresh_rate_120hz">Fixed 120Hz</string>
+    <string name="refresh_rate_120hz_summary">Locks display refresh rate to 120Hz for minimum input latency</string>
+    <string name="stylus_charging_notification_title">Stylus Charging Notification</string>
+    <string name="stylus_charging_notification_summary">Show persistent notification and charging pill while wirelessly docked</string>
+    <string name="stylus_info_footer">Stylus Mode configures pen-compatible touch scanning and refresh rates. Disabling it when not using a pen guarantees zero background polling or battery drain.</string>
+
+    <!-- Xiaomi Keyboard -->
+    <string name="keyboard_title">Xiaomi Keyboard</string>
+    <string name="keyboard_summary">Magnetic pogo-pin dock monitoring and power management</string>
+    <string name="keyboard_switch_title">Keyboard Monitoring</string>
+    <string name="keyboard_switch_summary">Detect keyboard attachment via magnetic pogo-pin connector</string>
+    <string name="keyboard_info_footer">Enable only if you own the Xiaomi Smart Keyboard.\n\nStandard Bluetooth keyboards work independently of this setting.</string>
+
+    <!-- Smart Cover (Lid) -->
+    <string name="lid_title">Smart Cover (Lid)</string>
+    <string name="lid_summary">Hall sensor magnetic cover behavior and display wake</string>
+    <string name="lid_switch_title">Smart Cover (Lid)</string>
+    <string name="lid_switch_summary">Lock device when cover is closed</string>
+    <string name="lid_wake_title">Lid Wake</string>
+    <string name="lid_wake_summary">Wake screen when cover is opened</string>
+    <string name="lid_info_footer">Configures the magnetic Hall effect sensor. Closing a compatible folio case will automatically lock the tablet, while opening will wake the display.</string>
 </resources>

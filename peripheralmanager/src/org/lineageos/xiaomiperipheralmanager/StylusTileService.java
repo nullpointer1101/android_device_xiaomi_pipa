@@ -8,12 +8,14 @@
 package org.lineageos.xiaomiperipheralmanager;
 
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.drawable.Icon;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemProperties;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
 import android.util.Log;
@@ -31,18 +33,24 @@ public class StylusTileService extends TileService {
     static final String ACTION_STYLUS_CHANGED =
             "org.lineageos.xiaomiperipheralmanager.STYLUS_MODE_CHANGED";
 
+    private static final ComponentName PIPACORE_STYLUS_COMPONENT =
+            new ComponentName("org.pipacore", "org.pipacore.StylusActivity");
+
     private static final String STYLUS_MODE_KEY         = "stylus_mode_key";
     private static final String STYLUS_REFRESH_RATE_KEY = "stylus_refresh_rate_key";
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
 
+    private boolean isStylusActive() {
+        return "18".equals(SystemProperties.get("persist.vendor.parts.pen", "2"))
+                || PreferenceManager.getDefaultSharedPreferences(this).getBoolean(STYLUS_MODE_KEY, false);
+    }
+
     /**
-     * Reads prefs at execution time — never at scheduling time — to avoid stale state.
+     * Reads prefs/props at execution time — never at scheduling time — to avoid stale state.
      */
     private final Runnable mDelayedUpdateRunnable = () -> {
-        boolean current = PreferenceManager
-                .getDefaultSharedPreferences(StylusTileService.this)
-                .getBoolean(STYLUS_MODE_KEY, false);
+        boolean current = isStylusActive();
         Log.d(TAG, "Delayed retry — stylus=" + current);
         updateTile(current);
     };
@@ -55,10 +63,8 @@ public class StylusTileService extends TileService {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (!ACTION_STYLUS_CHANGED.equals(intent.getAction())) return;
-            boolean active = PreferenceManager
-                    .getDefaultSharedPreferences(context)
-                    .getBoolean(STYLUS_MODE_KEY, false);
-            Log.d(TAG, "LocalBroadcast — stylus=" + active);
+            boolean active = isStylusActive();
+            Log.d(TAG, "Broadcast received — stylus=" + active);
             updateTile(active);
         }
     };
@@ -73,10 +79,11 @@ public class StylusTileService extends TileService {
 
         LocalBroadcastManager.getInstance(this)
                 .registerReceiver(mSettingsReceiver, new IntentFilter(ACTION_STYLUS_CHANGED));
+        try {
+            registerReceiver(mSettingsReceiver, new IntentFilter(ACTION_STYLUS_CHANGED), Context.RECEIVER_EXPORTED);
+        } catch (Exception ignored) {}
 
-        boolean active = PreferenceManager
-                .getDefaultSharedPreferences(this)
-                .getBoolean(STYLUS_MODE_KEY, false);
+        boolean active = isStylusActive();
         Log.d(TAG, "onStartListening — stylus=" + active
                 + ", tile=" + (getQsTile() != null ? "ok" : "null"));
 
@@ -93,6 +100,19 @@ public class StylusTileService extends TileService {
         super.onStopListening();
         mHandler.removeCallbacks(mDelayedUpdateRunnable);
         LocalBroadcastManager.getInstance(this).unregisterReceiver(mSettingsReceiver);
+        try {
+            unregisterReceiver(mSettingsReceiver);
+        } catch (Exception ignored) {}
+    }
+
+    /**
+     * Launches PipaCore's StylusActivity for tile preferences.
+     */
+    public void launchStylusSettings() {
+        Intent intent = new Intent();
+        intent.setComponent(PIPACORE_STYLUS_COMPONENT);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivityAndCollapse(intent);
     }
 
     // -----------------------------------------------------------------------

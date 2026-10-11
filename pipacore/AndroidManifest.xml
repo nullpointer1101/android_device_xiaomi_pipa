@@ -85,6 +85,36 @@
             android:theme="@style/Theme.PipaCore.Dark"
             android:exported="false" />
 
+        <!-- Stylus Activity -->
+        <activity
+            android:name=".StylusActivity"
+            android:label="@string/stylus_title"
+            android:icon="@drawable/ic_stylus"
+            android:theme="@style/Theme.PipaCore.Dark"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Keyboard Activity -->
+        <activity
+            android:name=".KeyboardActivity"
+            android:label="@string/keyboard_title"
+            android:icon="@drawable/ic_keyboard"
+            android:theme="@style/Theme.PipaCore.Dark"
+            android:exported="false" />
+
+        <!-- Lid Activity -->
+        <activity
+            android:name=".LidActivity"
+            android:label="@string/lid_title"
+            android:icon="@drawable/ic_lid"
+            android:theme="@style/Theme.PipaCore.Dark"
+            android:exported="false" />
+
+
         <!-- Thermal Profile QS Tile Service -->
         <service
             android:name=".ThermalProfileTileService"

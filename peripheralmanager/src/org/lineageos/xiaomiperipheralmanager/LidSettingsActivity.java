@@ -1,33 +1,38 @@
 /*
- * Copyright (C) 2023-2025 The LineageOS Project
+ * Copyright (C) 2023-2026 The LineageOS Project
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 package org.lineageos.xiaomiperipheralmanager;
 
+import android.app.Activity;
+import android.content.ComponentName;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 
-import com.android.settingslib.collapsingtoolbar.CollapsingToolbarBaseActivity;
-
 /**
- * Settings activity for smart cover/lid configuration
- * Hosts the LidSettingsFragment for user configuration
+ * Trampoline activity that redirects to PipaCore's LidActivity.
  */
-public class LidSettingsActivity extends CollapsingToolbarBaseActivity {
+public class LidSettingsActivity extends Activity {
 
-    private static final String TAG = "XiaomiLidSettings";
-    private static final String TAG_LID = "lid";
+    private static final String TAG = "XiaomiLidRedirect";
+    private static final ComponentName PIPACORE_LID =
+            new ComponentName("org.pipacore", "org.pipacore.LidActivity");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
-        Log.i(TAG, "Opening lid settings");
-        
-        getSupportFragmentManager().beginTransaction().replace(
-            com.android.settingslib.collapsingtoolbar.R.id.content_frame,
-                new LidSettingsFragment(), TAG_LID).commit();
+        Log.i(TAG, "Redirecting to PipaCore LidActivity");
+        Intent intent = new Intent();
+        intent.setComponent(PIPACORE_LID);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        try {
+            startActivity(intent);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to launch PipaCore LidActivity", e);
+        }
+        finish();
     }
 }

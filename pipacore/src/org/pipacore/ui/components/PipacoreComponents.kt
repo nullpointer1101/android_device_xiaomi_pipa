@@ -7,9 +7,11 @@
 package org.pipacore.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -390,3 +392,99 @@ fun WarningBanner(message: String) {
         }
     }
 }
+
+/**
+ * Modern Selector Radio Card adapting to Monet.
+ * Credits: MufasaXz
+ */
+@Composable
+fun ModernSelectorCard(
+    title: String,
+    summary: String,
+    iconRes: Int? = null,
+    isEnabled: Boolean = true,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+            .clip(SquircleCardShape)
+            .clickable(enabled = isEnabled) { onClick() }
+            .then(
+                if (isSelected) Modifier.border(1.5.dp, MaterialTheme.colorScheme.primary, SquircleCardShape)
+                else Modifier
+            ),
+        shape = SquircleCardShape,
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) MaterialTheme.colorScheme.surfaceVariant
+                             else if (isEnabled) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                             else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            if (iconRes != null) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(SquircleIconShape)
+                        .background(
+                            if (isSelected) MaterialTheme.colorScheme.primary
+                            else if (isEnabled) MaterialTheme.colorScheme.primaryContainer
+                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = iconRes),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                               else if (isEnabled) MaterialTheme.colorScheme.onPrimaryContainer
+                               else MaterialTheme.colorScheme.outline
+                    )
+                }
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 17.sp
+                    ),
+                    color = if (isEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
+                )
+                Spacer(modifier = Modifier.height(3.dp))
+                Text(
+                    text = summary,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 13.sp
+                    ),
+                    color = if (isEnabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.outline
+                )
+            }
+
+            RadioButton(
+                selected = isSelected,
+                onClick = onClick,
+                enabled = isEnabled,
+                colors = RadioButtonDefaults.colors(
+                    selectedColor = MaterialTheme.colorScheme.primary,
+                    unselectedColor = MaterialTheme.colorScheme.outline,
+                    disabledSelectedColor = MaterialTheme.colorScheme.outline,
+                    disabledUnselectedColor = Color.Transparent
+                )
+            )
+        }
+    }
+}
+
