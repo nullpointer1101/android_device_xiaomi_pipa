@@ -6,9 +6,11 @@
 
 package org.pipacore;
 
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.SystemProperties;
+import android.service.quicksettings.TileService;
 import android.util.Log;
 import androidx.preference.PreferenceManager;
 
@@ -49,6 +51,7 @@ public final class ThermalManager {
             // Revert back to default system thermal mode (0)
             applyProfile(PROFILE_BALANCED);
         }
+        notifyTile(context);
     }
 
     /**
@@ -75,6 +78,17 @@ public final class ThermalManager {
         // 2. Apply backend hardware & system property changes if master toggle is enabled
         if (isEnabled(context)) {
             applyProfile(profile);
+        }
+        notifyTile(context);
+    }
+
+    private static void notifyTile(Context context) {
+        try {
+            TileService.requestListeningState(
+                    context,
+                    new ComponentName(context, ThermalProfileTileService.class));
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to request listening state for ThermalProfileTileService", e);
         }
     }
 

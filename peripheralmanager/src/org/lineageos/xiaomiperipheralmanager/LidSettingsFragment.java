@@ -9,22 +9,16 @@ package org.lineageos.xiaomiperipheralmanager;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.os.SystemProperties;
+import android.provider.Settings;
 import android.util.Log;
 
-import androidx.preference.PreferenceManager;
-import androidx.preference.ListPreference;
-import androidx.preference.Preference;
-import androidx.preference.Preference.OnPreferenceChangeListener;
 import androidx.preference.PreferenceFragmentCompat;
+import androidx.preference.PreferenceManager;
 import androidx.preference.SwitchPreference;
-import com.android.settingslib.widget.MainSwitchPreference;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
-
-import android.provider.Settings;
 
 /**
  * Settings fragment for lid configuration
@@ -83,7 +77,7 @@ public class LidSettingsFragment extends PreferenceFragmentCompat implements
     public void onSharedPreferenceChanged(SharedPreferences sharedPreference, String key) {
         if (LID_KEY.equals(key)) {
             try {
-                boolean newStatus = mLidPreference.getBoolean(key, false);
+                boolean newStatus = mLidPreference.getBoolean(key, true);
                 logInfo("Lid preference changed to: " + newStatus);
                 Settings.Global.putInt(getActivity().getContentResolver(),
                                       "lid_behavior", newStatus ? 1 : 0);
