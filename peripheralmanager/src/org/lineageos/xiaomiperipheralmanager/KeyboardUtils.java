@@ -7,7 +7,6 @@
 package org.lineageos.xiaomiperipheralmanager;
 
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.hardware.input.InputManager;
 import android.os.SystemProperties;
@@ -75,15 +74,14 @@ public class KeyboardUtils {
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
             prefs.edit().putBoolean(KEYBOARD_MODE_KEY, enabled).apply();
             
-            // Send broadcast to native service to start/stop monitoring
-            Intent intent = new Intent("org.lineageos.xiaomiperipheralmanager.KEYBOARD_MODE_CHANGED");
-            intent.putExtra("enabled", enabled);
-            context.sendBroadcast(intent);
-            
+            // Set system property to trigger init.rc service start/stop
+            String propertyValue = enabled ? "1" : "0";
+            SystemProperties.set("persist.vendor.parts.keyboard", propertyValue);
+
             if (enabled) {
-                logInfo("Keyboard monitoring enabled - native service will start");
+                logInfo("Keyboard monitoring enabled (persist.vendor.parts.keyboard=1)");
             } else {
-                logInfo("Keyboard monitoring disabled - native service will stop");
+                logInfo("Keyboard monitoring disabled (persist.vendor.parts.keyboard=0)");
                 // Ensure keyboard is disabled when monitoring is turned off
                 setKeyboardEnabled(false);
             }

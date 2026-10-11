@@ -5,12 +5,5 @@ type xiaomi_keyboard_exec, exec_type, vendor_file_type, file_type;
 
 init_daemon_domain(xiaomi_keyboard)
 
-get_prop(xiaomi_keyboard, hwservicemanager_prop)
-binder_call(xiaomi_keyboard, hwservicemanager)
-binder_call(xiaomi_keyboard, system_server)
-
 allow xiaomi_keyboard xiaomi_keyboard_device:chr_file { open read write };
-allow xiaomi_keyboard fwk_sensor_hwservice:hwservice_manager find;
-allow xiaomi_keyboard fwk_sensor_service:service_manager find;
 allow xiaomi_keyboard input_device:dir search;
-allow xiaomi_keyboard servicemanager:binder { call transfer };

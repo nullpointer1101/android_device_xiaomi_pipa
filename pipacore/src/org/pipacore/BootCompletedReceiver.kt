@@ -20,7 +20,7 @@ class BootCompletedReceiver : BroadcastReceiver() {
             "android.intent.action.QUICKBOOT_POWERON" == action) {
             Log.i(TAG, "Boot completed, restoring PipaCore settings...")
             CoreControlUtils.restoreCoreStates(context)
-            ThermalProfileUtils.restoreProfile(context)
+            ThermalManager.restoreProfile(context)
         }
     }
 

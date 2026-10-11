@@ -37,12 +37,6 @@ on boot
     chown system system /sys/devices/system/cpu/cpu7/online
     chmod 0666 /sys/devices/system/cpu/cpu7/online
 
-    # Core control driver permissions
-    chown system system /sys/devices/system/cpu/cpu4/core_ctl/min_cpus
-    chmod 0664 /sys/devices/system/cpu/cpu4/core_ctl/min_cpus
-    chown system system /sys/devices/system/cpu/cpu4/core_ctl/enable
-    chmod 0664 /sys/devices/system/cpu/cpu4/core_ctl/enable
-
     # Ensure schedutil governor is initialized across any kernel
     write /sys/devices/system/cpu/cpufreq/policy0/scaling_governor schedutil
     write /sys/devices/system/cpu/cpufreq/policy4/scaling_governor schedutil

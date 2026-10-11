@@ -29,9 +29,6 @@ android_app {
         "androidx.compose.ui_ui",
         "androidx.lifecycle_lifecycle-viewmodel-compose",
         "androidx.preference_preference",
-        "SettingsLibCollapsingToolbarBaseActivity",
-        "SettingsLibMainSwitchPreference",
-        "SettingsLibFooterPreference",
         "kotlinx-coroutines-core",
     ],
     kotlincflags: [

@@ -6,8 +6,6 @@
 
 package org.lineageos.xiaomiperipheralmanager;
 
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.hardware.input.InputManager;
 import android.util.Log;
@@ -16,7 +14,6 @@ import android.view.InputDevice;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
-import java.util.Set;
 
 /**
  * OEM-level Hardware Manager for reading Xiaomi Stylus wireless charging status.

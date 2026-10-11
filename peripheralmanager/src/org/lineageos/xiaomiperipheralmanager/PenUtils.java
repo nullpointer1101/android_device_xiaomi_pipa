@@ -64,8 +64,7 @@ public class PenUtils {
     }
 
     /**
-     * Initialize all resources. Called from BootCompletedReceiver (and from
-     * ScreenStateReceiver if the process was killed and restarted).
+     * Initialize all resources. Called from BootCompletedReceiver.
      */
     public static void setup(Context context) {
         mContext      = context;

@@ -48,22 +48,6 @@
             </intent-filter>
         </receiver>
 
-        <receiver
-            android:name=".ScreenStateReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.SCREEN_ON" />
-            </intent-filter>
-        </receiver>
-
-        <receiver
-            android:name=".KeyboardPropertyHandler"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="org.lineageos.xiaomiperipheralmanager.KEYBOARD_MODE_CHANGED" />
-            </intent-filter>
-        </receiver>
-
         <activity
             android:name=".StylusSettingsActivity"
             android:label="@string/stylus_title"
