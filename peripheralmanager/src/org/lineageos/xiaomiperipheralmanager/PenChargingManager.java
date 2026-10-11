@@ -77,13 +77,26 @@ public class PenChargingManager {
         }
     }
 
+    private static volatile String sAvailableHardwarePath = null;
+
     /**
-     * Finds the available power supply hardware path.
+     * Finds and caches the available power supply hardware path.
      */
     public static String getAvailableHardwarePath() {
-        for (String path : POWER_SUPPLY_PATHS) {
-            if (new File(path).exists()) {
-                return path;
+        String path = sAvailableHardwarePath;
+        if (path != null) {
+            return path;
+        }
+        synchronized (PenChargingManager.class) {
+            if (sAvailableHardwarePath != null) {
+                return sAvailableHardwarePath;
+            }
+            for (String candidate : POWER_SUPPLY_PATHS) {
+                if (new File(candidate).exists()) {
+                    sAvailableHardwarePath = candidate;
+                    Log.i(TAG, "Resolved wireless charging hardware path: " + candidate);
+                    return candidate;
+                }
             }
         }
         return null;

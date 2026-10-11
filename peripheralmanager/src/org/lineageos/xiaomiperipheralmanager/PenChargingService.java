@@ -18,6 +18,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
@@ -60,8 +61,10 @@ public class PenChargingService extends Service {
     private SharedPreferences mPreferences;
     private StylusPillController mPillController;
 
-    private final Handler mHandler = new Handler(Looper.getMainLooper());
-    private boolean mIsMonitoring = false;
+    private final Handler mMainHandler = new Handler(Looper.getMainLooper());
+    private HandlerThread mWorkThread;
+    private Handler mWorkHandler;
+    private volatile boolean mIsMonitoring = false;
     private boolean mWasCharging = false;
     private boolean mHasShown100PercentPopup = false;
     private int mLastBatteryLevel = BATTERY_LEVEL_UNKNOWN;
@@ -72,7 +75,9 @@ public class PenChargingService extends Service {
         public void run() {
             if (!mIsMonitoring) return;
             updateChargingStatus();
-            mHandler.postDelayed(this, POLL_INTERVAL_ACTIVE_MS);
+            if (mIsMonitoring && mWorkHandler != null) {
+                mWorkHandler.postDelayed(this, POLL_INTERVAL_ACTIVE_MS);
+            }
         }
     };
 
@@ -87,12 +92,18 @@ public class PenChargingService extends Service {
                 if (PenChargingManager.DEBUG) Log.d(TAG, "Screen turned OFF, pausing monitoring");
                 stopMonitoring();
             } else if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)) {
-                handleBluetoothConnected(intent);
+                if (mWorkHandler != null) {
+                    mWorkHandler.post(() -> handleBluetoothConnected(intent));
+                }
             } else if (BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action) ||
                        BluetoothDevice.ACTION_BATTERY_LEVEL_CHANGED.equals(action)) {
-                updateChargingStatus();
+                if (mWorkHandler != null) {
+                    mWorkHandler.post(PenChargingService.this::updateChargingStatus);
+                }
             } else if (ACTION_SHOW_STYLUS_POPUP.equals(action)) {
-                handleManualPopupRequest(intent);
+                if (mWorkHandler != null) {
+                    mWorkHandler.post(() -> handleManualPopupRequest(intent));
+                }
             }
         }
     };
@@ -109,7 +120,9 @@ public class PenChargingService extends Service {
                         } else {
                             if (mPowerManager != null && mPowerManager.isInteractive()) {
                                 startMonitoring();
-                                updateChargingStatus();
+                                if (mWorkHandler != null) {
+                                    mWorkHandler.post(PenChargingService.this::updateChargingStatus);
+                                }
                             }
                         }
                     }
@@ -132,6 +145,10 @@ public class PenChargingService extends Service {
             return;
         }
 
+        mWorkThread = new HandlerThread("PenChargingMonitor");
+        mWorkThread.start();
+        mWorkHandler = new Handler(mWorkThread.getLooper());
+
         createNotificationChannel();
         mPillController = new StylusPillController(this);
 
@@ -147,7 +164,9 @@ public class PenChargingService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && ACTION_SHOW_STYLUS_POPUP.equals(intent.getAction())) {
-            handleManualPopupRequest(intent);
+            if (mWorkHandler != null) {
+                mWorkHandler.post(() -> handleManualPopupRequest(intent));
+            }
         }
         return START_STICKY;
     }
@@ -162,6 +181,11 @@ public class PenChargingService extends Service {
         try {
             unregisterReceiver(mStateReceiver);
         } catch (Exception ignored) {}
+        if (mWorkThread != null) {
+            mWorkThread.quitSafely();
+            mWorkThread = null;
+            mWorkHandler = null;
+        }
         Log.i(TAG, "PenChargingService destroyed");
     }
 
@@ -199,21 +223,30 @@ public class PenChargingService extends Service {
     private void startMonitoring() {
         if (!mIsMonitoring && PenChargingManager.isAvailable()) {
             mIsMonitoring = true;
-            mHandler.post(mPollRunnable);
+            if (mWorkHandler != null) {
+                mWorkHandler.removeCallbacks(mPollRunnable);
+                mWorkHandler.post(mPollRunnable);
+            }
         }
     }
 
     private void stopMonitoring() {
         if (mIsMonitoring) {
             mIsMonitoring = false;
-            mHandler.removeCallbacks(mPollRunnable);
+            if (mWorkHandler != null) {
+                mWorkHandler.removeCallbacks(mPollRunnable);
+                mWorkHandler.post(() -> {
+                    PenChargingManager.resetDetectionState();
+                    mWasCharging = false;
+                    mHasShown100PercentPopup = false;
+                    mLastBatteryLevel = BATTERY_LEVEL_UNKNOWN;
+                    mFirstSeen99AtMs = null;
+                });
+            }
             hideNotification();
-            mPillController.hidePill();
-            PenChargingManager.resetDetectionState();
-            mWasCharging = false;
-            mHasShown100PercentPopup = false;
-            mLastBatteryLevel = BATTERY_LEVEL_UNKNOWN;
-            mFirstSeen99AtMs = null;
+            if (mPillController != null) {
+                mPillController.hidePill();
+            }
         }
     }
 
@@ -333,7 +366,7 @@ public class PenChargingService extends Service {
                     mHasShown100PercentPopup = true;
                     Log.i(TAG, "Stylus reached 100% -> Triggering full charge popup");
                     mPillController.showPopup(StylusState.FULLY_CHARGED, 100, null);
-                    mHandler.post(() -> Toast.makeText(getApplicationContext(),
+                    mMainHandler.post(() -> Toast.makeText(getApplicationContext(),
                             R.string.pen_fully_charged_toast,
                             Toast.LENGTH_SHORT).show());
                 }
