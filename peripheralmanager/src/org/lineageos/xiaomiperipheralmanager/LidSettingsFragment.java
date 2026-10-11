@@ -47,7 +47,7 @@ public class LidSettingsFragment extends PreferenceFragmentCompat implements
             SwitchPreference switchPreference = (SwitchPreference) findPreference(LID_KEY);
 
             if (switchPreference != null) {
-                switchPreference.setChecked(mLidPreference.getBoolean(LID_KEY, false));
+                switchPreference.setChecked(mLidPreference.getBoolean(LID_KEY, true));
                 switchPreference.setEnabled(true);
             } else {
                 logError("Could not find lid switch preference");

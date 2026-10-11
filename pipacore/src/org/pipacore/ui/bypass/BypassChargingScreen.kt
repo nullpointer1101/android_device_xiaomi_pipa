@@ -6,6 +6,9 @@
 
 package org.pipacore.ui.bypass
 
+import android.content.ComponentName
+import android.content.SharedPreferences
+import android.service.quicksettings.TileService
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -13,8 +16,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.preference.PreferenceManager
+import org.pipacore.BypassChargingTileService
 import org.pipacore.BypassChargingUtils
 import org.pipacore.R
 import org.pipacore.ui.components.*
@@ -22,9 +28,24 @@ import org.pipacore.ui.theme.*
 
 @Composable
 fun BypassChargingScreen(onBackPressed: () -> Unit) {
+    val context = LocalContext.current
     val scrollState = rememberScrollState()
     val isSupported = remember { BypassChargingUtils.isSupported() }
     var isEnabled by remember { mutableStateOf(BypassChargingUtils.getCurrentHardwareState()) }
+
+    // Synchronize reactively with QS Tile & external preference changes
+    DisposableEffect(context) {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == BypassChargingUtils.KEY_BYPASS_CHARGING) {
+                isEnabled = BypassChargingUtils.getCurrentHardwareState()
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose {
+            prefs.unregisterOnSharedPreferenceChangeListener(listener)
+        }
+    }
 
     TabletContainer {
         Column(
@@ -58,6 +79,14 @@ fun BypassChargingScreen(onBackPressed: () -> Unit) {
                     onCheckedChange = { newState ->
                         BypassChargingUtils.setEnabled(newState)
                         isEnabled = newState
+
+                        // Persist preference and notify QS Tile
+                        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+                        prefs.edit().putBoolean(BypassChargingUtils.KEY_BYPASS_CHARGING, newState).apply()
+                        TileService.requestListeningState(
+                            context,
+                            ComponentName(context, BypassChargingTileService::class.java)
+                        )
                     }
                 )
             }

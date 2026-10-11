@@ -12,8 +12,8 @@ import android.util.Log;
 import com.android.settingslib.collapsingtoolbar.CollapsingToolbarBaseActivity;
 
 /**
- * Settings activity for stylus/pen configuration
- * Hosts the StylusSettingsFragment for user configuration
+ * Settings activity for smart cover/lid configuration
+ * Hosts the LidSettingsFragment for user configuration
  */
 public class LidSettingsActivity extends CollapsingToolbarBaseActivity {
 
