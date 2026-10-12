@@ -21,7 +21,6 @@ public final class ThermalManager {
     public static final String PREF_KEY_ENABLED = "pipacore_thermal_enabled";
     public static final String PREF_KEY_PROFILE = "pipacore_thermal_profile";
     public static final String PROP_PIPACORE_PROFILE = "sys.pipacore.profile";
-    public static final String SCONFIG_PATH = "/sys/class/thermal/thermal_message/sconfig";
 
     // 3 Strict Modes
     public static final int PROFILE_BALANCED = 0;
@@ -48,7 +47,7 @@ public final class ThermalManager {
         if (enabled) {
             applyProfile(getProfile(context));
         } else {
-            // Revert back to default system thermal mode (0)
+            // Request Balanced tuning; this is not a restore of prior hardware state.
             applyProfile(PROFILE_BALANCED);
         }
         notifyTile(context);
@@ -64,13 +63,29 @@ public final class ThermalManager {
             String prop = SystemProperties.get(PROP_PIPACORE_PROFILE, "0");
             defaultVal = Integer.parseInt(prop.trim());
         } catch (Exception ignored) {}
-        return prefs.getInt(PREF_KEY_PROFILE, defaultVal);
+        int profile;
+        try {
+            profile = prefs.getInt(PREF_KEY_PROFILE, defaultVal);
+        } catch (ClassCastException e) {
+            Log.w(TAG, "Invalid saved profile type; using Balanced", e);
+            profile = PROFILE_BALANCED;
+        }
+        return isValidProfile(profile) ? profile : PROFILE_BALANCED;
+    }
+
+    private static boolean isValidProfile(int profile) {
+        return profile == PROFILE_BALANCED || profile == PROFILE_BATTERY
+                || profile == PROFILE_PERFORMANCE;
     }
 
     /**
-     * Set active thermal profile across SharedPreferences, sconfig sysfs node, and system property
+     * Save the selected tuning profile and request it through the init bridge.
      */
     public static void setProfile(Context context, int profile) {
+        if (!isValidProfile(profile)) {
+            Log.w(TAG, "Ignoring unsupported profile " + profile);
+            return;
+        }
         // 1. Update shared SharedPreferences value
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         prefs.edit().putInt(PREF_KEY_PROFILE, profile).apply();
@@ -93,26 +108,22 @@ public final class ThermalManager {
     }
 
     /**
-     * Apply profile to hardware sconfig node and system property
+     * Request init tuning; PowerHAL may subsequently update CPU policy limits.
+     * Vendor thermal scenarios remain owned by XiaomiParts and mi_thermald.
      */
     public static void applyProfile(int profile) {
+        if (!isValidProfile(profile)) {
+            Log.w(TAG, "Ignoring unsupported profile " + profile);
+            return;
+        }
         final String profileVal = String.valueOf(profile);
 
-        // a) Write integer directly to sconfig thermal node
-        writeSconfig(profileVal);
-
-        // b) Set custom system property to trigger backend init script bridge
+        // A property request is not confirmation that sysfs tuning succeeded.
         try {
             SystemProperties.set(PROP_PIPACORE_PROFILE, profileVal);
-            Log.i(TAG, "Applied profile " + profileVal + " -> " + PROP_PIPACORE_PROFILE + "=" + profileVal);
+            Log.i(TAG, "Requested profile " + profileVal + " -> " + PROP_PIPACORE_PROFILE + "=" + profileVal);
         } catch (Exception e) {
             Log.e(TAG, "Failed to set SystemProperties: " + PROP_PIPACORE_PROFILE + "=" + profileVal, e);
-        }
-    }
-
-    private static void writeSconfig(String value) {
-        if (FileUtils.fileExists(SCONFIG_PATH)) {
-            FileUtils.writeLine(SCONFIG_PATH, value);
         }
     }
 

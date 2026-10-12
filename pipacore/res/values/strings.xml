@@ -49,16 +49,16 @@
 
     <!-- Thermal Profiles -->
     <string name="thermal_profile_title">Thermal Profiles</string>
-    <string name="thermal_profile_summary">Manage thermal throttling and power limits</string>
+    <string name="thermal_profile_summary">Request CPU and GPU tuning; system power hints may override CPU limits</string>
     <string name="thermal_profile_enable_title">Enable Thermal Profiles</string>
-    <string name="thermal_profile_enable_summary">Apply custom thermal profile limits to system</string>
-    <string name="thermal_profile_disabled_summary">Using system default thermal configuration</string>
+    <string name="thermal_profile_enable_summary">Request custom tuning without changing vendor thermal protection</string>
+    <string name="thermal_profile_disabled_summary">Custom selection disabled; Balanced tuning requested</string>
     <string name="thermal_profile_performance">Performance</string>
-    <string name="thermal_profile_performance_summary">Higher thermal limits for intensive gaming and heavy multitasking</string>
+    <string name="thermal_profile_performance_summary">Higher CPU frequency floors for heavy workloads; may increase power use</string>
     <string name="thermal_profile_balanced">Balanced</string>
     <string name="thermal_profile_balanced_summary">Optimized balance between sustained performance and battery temperature</string>
     <string name="thermal_profile_battery">Battery Saver</string>
-    <string name="thermal_profile_battery_summary">Aggressive thermal limits to maximize battery life and keep device cool</string>
+    <string name="thermal_profile_battery_summary">Request lower CPU and GPU ceilings; CPU limits may be overridden by system power hints</string>
     <string name="thermal_profile_tile_label">Thermal Profile</string>
     <string name="status_offline">Disabled</string>
 
