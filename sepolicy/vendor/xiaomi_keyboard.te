@@ -5,5 +5,7 @@ type xiaomi_keyboard_exec, exec_type, vendor_file_type, file_type;
 
 init_daemon_domain(xiaomi_keyboard)
 
-allow xiaomi_keyboard xiaomi_keyboard_device:chr_file { open read write };
-allow xiaomi_keyboard input_device:dir search;
+allow xiaomi_keyboard xiaomi_keyboard_device:chr_file rw_file_perms;
+
+allow xiaomi_keyboard input_device:dir r_dir_perms;
+allow xiaomi_keyboard input_device:chr_file getattr;
