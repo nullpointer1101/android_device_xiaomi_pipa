@@ -14,7 +14,9 @@
     <string name="stylus_switch_title">Stylus Mode</string>
     <string name="stylus_tile_label">Stylus Mode</string>
     <string name="force_stylus_switch_title">Force recognize stylus</string>
-    <string name="force_stylus_switch_summary">Allows the official stylus to work without Bluetooth and enables support for third-party pens. Also forces the display to operate at 60/120 Hz even when no pen is connected.</string>
+    <string name="force_stylus_switch_summary">Always force pen touch mode and refresh rate without Bluetooth detection. For third-party pens or manual override.</string>
+    <string name="restore_on_dock_title">Restore on Dock</string>
+    <string name="restore_on_dock_summary">Restore default refresh rate (144Hz) when stylus is magnetically docked and charging</string>
     <string name="stylus_refresh_rate_title">Refresh rate</string>
     <string name="stylus_refresh_rate_summary">Select display refresh rate for stylus mode</string>
     <string name="stylus_more_info">Stylus Mode enables pen-compatible refresh rates when a supported stylus is connected. The display switches to 60 Hz or 120 Hz only while the pen is connected.</string>

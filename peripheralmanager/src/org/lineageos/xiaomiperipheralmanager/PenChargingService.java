@@ -108,16 +108,30 @@ public class PenChargingService extends Service {
         }
     };
 
+    public static boolean shouldServiceRun(Context context) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        boolean notifEnabled = prefs.getBoolean(PREF_STYLUS_CHARGING_NOTIF, false);
+        boolean stylusEnabled = prefs.getBoolean("stylus_mode_key", false);
+        boolean forceRecognize = prefs.getBoolean("force_recognize_stylus_key", false);
+        // Run service if charging notification is enabled, OR if smart stylus mode is active
+        return notifEnabled || (stylusEnabled && !forceRecognize);
+    }
+
     private final SharedPreferences.OnSharedPreferenceChangeListener mPrefListener =
             new SharedPreferences.OnSharedPreferenceChangeListener() {
                 @Override
                 public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
-                    if (PREF_STYLUS_CHARGING_NOTIF.equals(key)) {
-                        boolean enabled = prefs.getBoolean(key, false);
-                        if (!enabled) {
+                    if (PREF_STYLUS_CHARGING_NOTIF.equals(key) ||
+                            "stylus_mode_key".equals(key) ||
+                            "force_recognize_stylus_key".equals(key)) {
+                        boolean shouldRun = shouldServiceRun(PenChargingService.this);
+                        if (!shouldRun) {
                             hideNotification();
                             stopSelf();
                         } else {
+                            if (!prefs.getBoolean(PREF_STYLUS_CHARGING_NOTIF, false)) {
+                                hideNotification();
+                            }
                             if (mPowerManager != null && mPowerManager.isInteractive()) {
                                 startMonitoring();
                                 if (mWorkHandler != null) {
@@ -137,10 +151,8 @@ public class PenChargingService extends Service {
         mPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         mPreferences.registerOnSharedPreferenceChangeListener(mPrefListener);
 
-        boolean notifEnabled = mPreferences != null
-                && mPreferences.getBoolean(PREF_STYLUS_CHARGING_NOTIF, false);
-        if (!notifEnabled) {
-            Log.i(TAG, "Stylus charging notification disabled by user, stopping service");
+        if (!shouldServiceRun(this)) {
+            Log.i(TAG, "Neither charging notification nor smart stylus mode active, stopping service");
             stopSelf();
             return;
         }
@@ -247,6 +259,7 @@ public class PenChargingService extends Service {
             if (mPillController != null) {
                 mPillController.hidePill();
             }
+            PenUtils.onDockStateChanged(false);
         }
     }
 
@@ -301,19 +314,26 @@ public class PenChargingService extends Service {
 
     private void updateChargingStatus() {
         PenChargingManager.PenChargingStatus status = PenChargingManager.getStatus(this);
-        if (status == null || !status.isConnected || !status.isCharging) {
+        boolean isConnected = (status != null && status.isConnected);
+        boolean isCharging = (status != null && status.isConnected && status.isCharging);
+        boolean notifEnabled = mPreferences != null && mPreferences.getBoolean(PREF_STYLUS_CHARGING_NOTIF, false);
+
+        // Always notify PenUtils of the dock attachment state
+        PenUtils.onDockStateChanged(isConnected);
+
+        if (!isCharging) {
             if (mWasCharging) {
-                // Warn about a nearly empty stylus right when it is detached,
-                // that is the moment the user can still react to it.
-                StylusState detachState = StylusState.DISCONNECTED;
-                if (mLastBatteryLevel >= 0 && mLastBatteryLevel <= CRITICAL_BATTERY_THRESHOLD) {
-                    detachState = StylusState.CRITICAL_BATTERY;
-                } else if (mLastBatteryLevel >= 0 && mLastBatteryLevel <= LOW_BATTERY_THRESHOLD) {
-                    detachState = StylusState.LOW_BATTERY;
+                if (notifEnabled) {
+                    StylusState detachState = StylusState.DISCONNECTED;
+                    if (mLastBatteryLevel >= 0 && mLastBatteryLevel <= CRITICAL_BATTERY_THRESHOLD) {
+                        detachState = StylusState.CRITICAL_BATTERY;
+                    } else if (mLastBatteryLevel >= 0 && mLastBatteryLevel <= LOW_BATTERY_THRESHOLD) {
+                        detachState = StylusState.LOW_BATTERY;
+                    }
+                    Log.i(TAG, "Stylus detached -> Triggering " + detachState + " popup and removing notification");
+                    mPillController.showPopup(detachState, mLastBatteryLevel, null);
+                    hideNotification();
                 }
-                Log.i(TAG, "Stylus detached -> Triggering " + detachState + " popup and removing notification");
-                mPillController.showPopup(detachState, mLastBatteryLevel, null);
-                hideNotification();
                 mWasCharging = false;
                 mHasShown100PercentPopup = false;
                 mLastBatteryLevel = BATTERY_LEVEL_UNKNOWN;
@@ -346,16 +366,18 @@ public class PenChargingService extends Service {
         mWasCharging = true;
 
         if (justAttached) {
-            Log.i(TAG, "Stylus attached -> Triggering iOS floating charging popup (" +
-                    (displayLevel >= 0 ? displayLevel + "%" : "unknown SoC") + ")");
+            Log.i(TAG, "Stylus attached -> charging SoC: " +
+                    (displayLevel >= 0 ? displayLevel + "%" : "unknown"));
             mLastBatteryLevel = displayLevel;
-            StylusState state = (displayLevel >= 100) ? StylusState.FULLY_CHARGED : StylusState.CHARGING;
-            mPillController.showPopup(state, displayLevel, null);
+            if (notifEnabled) {
+                StylusState state = (displayLevel >= 100) ? StylusState.FULLY_CHARGED : StylusState.CHARGING;
+                mPillController.showPopup(state, displayLevel, null);
 
-            if (displayLevel >= 100) {
-                mHasShown100PercentPopup = true;
+                if (displayLevel >= 100) {
+                    mHasShown100PercentPopup = true;
+                }
+                showNotification(displayLevel);
             }
-            showNotification(displayLevel);
         } else {
             // Charging progress updates while remaining attached
             if (displayLevel < 100 && displayLevel >= 0) {
@@ -365,22 +387,26 @@ public class PenChargingService extends Service {
                 if (!mHasShown100PercentPopup) {
                     mHasShown100PercentPopup = true;
                     Log.i(TAG, "Stylus reached 100% -> Triggering full charge popup");
-                    mPillController.showPopup(StylusState.FULLY_CHARGED, 100, null);
-                    mMainHandler.post(() -> Toast.makeText(getApplicationContext(),
-                            R.string.pen_fully_charged_toast,
-                            Toast.LENGTH_SHORT).show());
+                    if (notifEnabled) {
+                        mPillController.showPopup(StylusState.FULLY_CHARGED, 100, null);
+                        mMainHandler.post(() -> Toast.makeText(getApplicationContext(),
+                                R.string.pen_fully_charged_toast,
+                                Toast.LENGTH_SHORT).show());
+                    }
                 }
             }
 
             if (displayLevel != mLastBatteryLevel) {
                 // Significant battery level jump update in place
-                if (mLastBatteryLevel >= 0 && Math.abs(displayLevel - mLastBatteryLevel) >= 5) {
+                if (notifEnabled && mLastBatteryLevel >= 0 && Math.abs(displayLevel - mLastBatteryLevel) >= 5) {
                     mPillController.showPopup(displayLevel >= 100 ? StylusState.FULLY_CHARGED : StylusState.CHARGING,
                             displayLevel, null);
                 }
 
                 mLastBatteryLevel = displayLevel;
-                showNotification(displayLevel);
+                if (notifEnabled) {
+                    showNotification(displayLevel);
+                }
             }
         }
     }
@@ -432,12 +458,13 @@ public class PenChargingService extends Service {
     }
 
     public static void start(Context context) {
-        if (PenChargingManager.isAvailable()) {
+        if (PenChargingManager.isAvailable() && shouldServiceRun(context)) {
             Intent intent = new Intent(context, PenChargingService.class);
             context.startService(intent);
             Log.i(TAG, "Starting PenChargingService");
         } else {
-            Log.w(TAG, "Wireless charging hardware not available, skipping PenChargingService");
+            Log.w(TAG, "PenChargingService start skipped: available=" + PenChargingManager.isAvailable()
+                    + ", shouldRun=" + shouldServiceRun(context));
         }
     }
 

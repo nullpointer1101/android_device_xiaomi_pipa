@@ -30,6 +30,13 @@
         android:defaultValue="false"
         android:dependency="stylus_mode_key" />
 
+    <SwitchPreference
+        android:key="stylus_restore_on_dock_key"
+        android:title="@string/restore_on_dock_title"
+        android:summary="@string/restore_on_dock_summary"
+        android:defaultValue="true"
+        android:dependency="stylus_mode_key" />
+
     <ListPreference
         android:key="stylus_refresh_rate_key"
         android:title="@string/stylus_refresh_rate_title"

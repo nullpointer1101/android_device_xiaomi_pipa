@@ -147,9 +147,10 @@ public class StylusSettingsFragment extends PreferenceFragmentCompat implements
                 boolean enabled = prefs.getBoolean(key, false);
                 logInfo("Stylus mode → " + enabled);
                 PenUtils.onStylusModeChanged(enabled);
-                if (enabled) {
-                    PenUtils.setRefreshRateMode(
-                            prefs.getString(STYLUS_REFRESH_RATE_KEY, RATE_DYNAMIC));
+                if (PenChargingService.shouldServiceRun(requireContext())) {
+                    PenChargingService.start(requireContext());
+                } else {
+                    PenChargingService.stop(requireContext());
                 }
                 notifyTile();
 
@@ -157,21 +158,28 @@ public class StylusSettingsFragment extends PreferenceFragmentCompat implements
                 boolean enabled = prefs.getBoolean(key, false);
                 logInfo("Force recognize → " + enabled);
                 PenUtils.onForceRecognizeChanged(enabled);
+                if (PenChargingService.shouldServiceRun(requireContext())) {
+                    PenChargingService.start(requireContext());
+                } else {
+                    PenChargingService.stop(requireContext());
+                }
                 notifyTile();
+
+            } else if ("stylus_restore_on_dock_key".equals(key)) {
+                boolean enabled = prefs.getBoolean(key, true);
+                logInfo("Restore on dock → " + enabled);
+                PenUtils.onRestoreOnDockChanged(enabled);
 
             } else if (STYLUS_REFRESH_RATE_KEY.equals(key)) {
                 String rate = prefs.getString(key, RATE_DYNAMIC);
                 logInfo("Refresh rate → " + rate);
-                if (prefs.getBoolean(STYLUS_MODE_KEY, false)) {
-                    PenUtils.setRefreshRateMode(rate);
-                }
-                // Notify tile so subtitle updates even when QS is closed.
+                PenUtils.setRefreshRateMode(rate);
                 notifyTile();
 
             } else if (PenChargingService.PREF_STYLUS_CHARGING_NOTIF.equals(key)) {
                 boolean enabled = prefs.getBoolean(key, false);
                 logInfo("Stylus charging notification → " + enabled);
-                if (enabled) {
+                if (PenChargingService.shouldServiceRun(requireContext())) {
                     PenChargingService.start(requireContext());
                 } else {
                     PenChargingService.stop(requireContext());

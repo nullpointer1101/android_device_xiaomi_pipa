@@ -48,6 +48,14 @@
             </intent-filter>
         </receiver>
 
+        <receiver
+            android:name=".StylusReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="org.lineageos.xiaomiperipheralmanager.STYLUS_MODE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
         <activity
             android:name=".StylusSettingsActivity"
             android:label="@string/stylus_title"

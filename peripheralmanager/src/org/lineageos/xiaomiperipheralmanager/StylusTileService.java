@@ -12,6 +12,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.graphics.drawable.Icon;
 import android.os.Handler;
 import android.os.Looper;
@@ -42,8 +43,7 @@ public class StylusTileService extends TileService {
     private final Handler mHandler = new Handler(Looper.getMainLooper());
 
     private boolean isStylusActive() {
-        return "18".equals(SystemProperties.get("persist.vendor.parts.pen", "2"))
-                || PreferenceManager.getDefaultSharedPreferences(this).getBoolean(STYLUS_MODE_KEY, false);
+        return PreferenceManager.getDefaultSharedPreferences(this).getBoolean(STYLUS_MODE_KEY, false);
     }
 
     /**
@@ -133,20 +133,22 @@ public class StylusTileService extends TileService {
         // Immediate visual feedback before any I/O.
         updateTile(newState);
 
-        final String refreshRate = PreferenceManager
-                .getDefaultSharedPreferences(this)
-                .getString(STYLUS_REFRESH_RATE_KEY, "dynamic");
-
         PreferenceManager.getDefaultSharedPreferences(this)
                 .edit()
                 .putBoolean(STYLUS_MODE_KEY, newState)
                 .apply();
 
         PenUtils.onStylusModeChanged(newState);
-        if (newState) PenUtils.setRefreshRateMode(refreshRate);
+
+        if (PenChargingService.shouldServiceRun(this)) {
+            PenChargingService.start(this);
+        } else {
+            PenChargingService.stop(this);
+        }
 
         LocalBroadcastManager.getInstance(this)
                 .sendBroadcast(new Intent(ACTION_STYLUS_CHANGED));
+        sendBroadcast(new Intent(ACTION_STYLUS_CHANGED).setPackage(getPackageName()));
     }
 
     // -----------------------------------------------------------------------
@@ -165,15 +167,21 @@ public class StylusTileService extends TileService {
             return;
         }
 
-        final String rate = PreferenceManager
-                .getDefaultSharedPreferences(this)
-                .getString(STYLUS_REFRESH_RATE_KEY, "dynamic");
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        final String rate = prefs.getString(STYLUS_REFRESH_RATE_KEY, "dynamic");
+        final boolean force = prefs.getBoolean("force_recognize_stylus_key", false);
 
         tile.setState(active ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE);
         tile.setIcon(Icon.createWithResource(this,
                 active ? R.drawable.ic_stylus_tile
                        : R.drawable.ic_stylus_tile_off));
-        tile.setSubtitle(rateLabel(rate));
+        if (!active) {
+            tile.setSubtitle("Off");
+        } else if (force) {
+            tile.setSubtitle("Force • " + rateLabel(rate));
+        } else {
+            tile.setSubtitle(rateLabel(rate));
+        }
         tile.updateTile();
     }
 

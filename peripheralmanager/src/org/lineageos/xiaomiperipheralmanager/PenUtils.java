@@ -25,13 +25,24 @@ import java.util.Locale;
 
 /**
  * Utility class for Xiaomi pen/stylus operations.
+ *
+ * Single source of truth for pen hardware state. PipaCore UI and tile service
+ * should only write preferences and call the on*Changed callbacks here — they
+ * must never set system properties or refresh rates directly.
+ *
+ * State machine:
+ *   OFF          — both toggles off, zero overhead
+ *   FORCE_ACTIVE — force mode on, unconditionally pen=18 + forced RR
+ *   SMART_IDLE   — stylus on, pen not BT-connected, default RR
+ *   SMART_ACTIVE — stylus on, pen BT-connected and not docked, forced RR
+ *   SMART_DOCKED — stylus on, pen BT-connected and docked, default RR
  */
 public class PenUtils {
 
     private static final String TAG   = "XiaomiPenUtils";
     private static final boolean DEBUG = true;
 
-    // Xiaomi pen hardware identifiers
+    // Xiaomi pen hardware identifiers (Bluetooth HID profile)
     private static final int PEN_VENDOR_ID  = 6421;
     private static final int PEN_PRODUCT_ID = 19841;
 
@@ -39,6 +50,7 @@ public class PenUtils {
     private static final String STYLUS_MODE_KEY         = "stylus_mode_key";
     private static final String FORCE_STYLUS_KEY        = "force_recognize_stylus_key";
     private static final String STYLUS_REFRESH_RATE_KEY = "stylus_refresh_rate_key";
+    private static final String RESTORE_ON_DOCK_KEY     = "stylus_restore_on_dock_key";
 
     // Static singletons
     private static InputManager    mInputManager;
@@ -50,6 +62,7 @@ public class PenUtils {
     // State
     private static boolean mPenModeEnabled    = false;
     private static boolean mIsPenConnected    = false;
+    private static boolean mIsDocked          = false;
     private static boolean mListenerRegistered = false;
     private static boolean mIsSetup           = false;
     private static String  mCurrentRefreshMode = "dynamic";
@@ -82,13 +95,14 @@ public class PenUtils {
         logInfo("Setup — stylus=" + stylusEnabled + ", force=" + forceRecognize
                 + ", rate=" + mCurrentRefreshMode);
 
-        // Register the input device listener only when a stylus feature is active.
-        // Devices without a stylus benefit from zero idle overhead when both are off.
-        if (stylusEnabled || forceRecognize) {
-            registerInputDeviceListener();
-        } else {
-            logInfo("Stylus features disabled — InputDeviceListener not registered");
-        }
+        // Query initial dock charging state
+        PenChargingManager.PenChargingStatus initialStatus = PenChargingManager.getStatus(context);
+        mIsDocked = (initialStatus != null && initialStatus.isConnected);
+
+        // Register the input device listener only for smart stylus mode.
+        // Force mode does not need detection — it unconditionally activates.
+        // Users without a stylus benefit from zero idle overhead.
+        updateListenerState();
 
         refreshPenMode();
     }
@@ -114,14 +128,18 @@ public class PenUtils {
     }
 
     /**
-     * Register/unregister the listener based on the combined state of
-     * Stylus Mode and Force Recognize. Called whenever either setting changes.
+     * Register/unregister the listener based on the combined state.
+     *
+     * InputDeviceListener is only needed for smart stylus mode (stylus ON,
+     * force OFF) to detect when the Xiaomi pen's BT HID profile appears.
+     * Force mode unconditionally activates, so no detection is needed.
+     * When both are off, no listeners run — zero overhead.
      */
     private static void updateListenerState() {
         if (mPreferences == null) return;
         boolean stylusOn = mPreferences.getBoolean(STYLUS_MODE_KEY, false);
         boolean forceOn  = mPreferences.getBoolean(FORCE_STYLUS_KEY, false);
-        if (stylusOn || forceOn) {
+        if (stylusOn && !forceOn) {
             registerInputDeviceListener();
         } else {
             unregisterInputDeviceListener();
@@ -141,12 +159,10 @@ public class PenUtils {
         mPenModeEnabled = true;
         SystemProperties.set("persist.vendor.parts.pen", "18");
 
-        boolean stylusModeEnabled = mPreferences != null
-                && mPreferences.getBoolean(STYLUS_MODE_KEY, false);
-        if (mRefreshUtils != null && stylusModeEnabled) {
+        // Always apply refresh rate when enabling pen mode — covers
+        // both force mode and smart mode.
+        if (mRefreshUtils != null) {
             applyRefreshRateMode(mCurrentRefreshMode);
-        } else {
-            logInfo("Pen hardware enabled without refresh constraints (Stylus Mode off)");
         }
     }
 
@@ -163,6 +179,15 @@ public class PenUtils {
         }
     }
 
+    /**
+     * Core state machine. Evaluates all inputs and decides whether pen mode
+     * should be active.
+     *
+     * Priority:
+     *   1. Force mode ON → always enable (unconditional)
+     *   2. Stylus mode ON + pen BT detected + (not docked OR !restoreOnDock) → enable
+     *   3. Everything else → disable
+     */
     private static void refreshPenMode() {
         if (mPreferences == null || mInputManager == null) {
             logError("refreshPenMode called before setup");
@@ -170,8 +195,10 @@ public class PenUtils {
         }
         boolean forceRecognize    = mPreferences.getBoolean(FORCE_STYLUS_KEY, false);
         boolean stylusModeEnabled = mPreferences.getBoolean(STYLUS_MODE_KEY, false);
-        boolean penDetected       = false;
+        boolean restoreOnDock     = mPreferences.getBoolean(RESTORE_ON_DOCK_KEY, true);
 
+        // Scan for the Xiaomi pen's Bluetooth HID input device
+        boolean penDetected = false;
         for (int id : mInputManager.getInputDeviceIds()) {
             if (isDeviceXiaomiPen(id)) {
                 penDetected = true;
@@ -179,15 +206,41 @@ public class PenUtils {
                 break;
             }
         }
-
         mIsPenConnected = penDetected;
 
-        // Enable pen mode only when: Stylus Mode is on AND (pen present OR force mode)
-        boolean shouldEnablePen = stylusModeEnabled && (penDetected || forceRecognize);
+        // Evaluate the state machine (Master switch controls both modes)
+        boolean shouldEnablePen;
+        String reason;
+
+        if (!stylusModeEnabled) {
+            // Master switch is OFF: unconditionally disable pen mode & restore 144Hz
+            shouldEnablePen = false;
+            reason = "stylus mode disabled";
+        } else if (forceRecognize) {
+            // Force mode: unconditionally enable, no Bluetooth or dock checks needed
+            shouldEnablePen = true;
+            reason = "force mode";
+        } else if (penDetected) {
+            // Smart mode: pen is BT-connected
+            if (mIsDocked && restoreOnDock) {
+                // Pen is on the dock and user wants 144Hz while docked
+                shouldEnablePen = false;
+                reason = "smart mode, docked (restoring default RR)";
+            } else {
+                // Pen is in hand or user doesn't want dock restore
+                shouldEnablePen = true;
+                reason = "smart mode, pen active";
+            }
+        } else {
+            // Smart mode but pen not BT-connected — idle
+            shouldEnablePen = false;
+            reason = "smart mode, pen not connected";
+        }
 
         logInfo("refreshPenMode — stylus=" + stylusModeEnabled
                 + ", pen=" + penDetected + ", force=" + forceRecognize
-                + " → enable=" + shouldEnablePen);
+                + ", docked=" + mIsDocked + ", restoreOnDock=" + restoreOnDock
+                + " → enable=" + shouldEnablePen + " (" + reason + ")");
 
         if (shouldEnablePen) {
             enablePenMode();
@@ -222,9 +275,8 @@ public class PenUtils {
     public static void setRefreshRateMode(String mode) {
         logInfo("Refresh rate mode → " + mode);
         mCurrentRefreshMode = mode;
-        boolean stylusModeEnabled = mPreferences != null
-                && mPreferences.getBoolean(STYLUS_MODE_KEY, false);
-        if (mPenModeEnabled && mRefreshUtils != null && stylusModeEnabled) {
+        // Re-apply immediately if pen mode is currently active
+        if (mPenModeEnabled && mRefreshUtils != null) {
             applyRefreshRateMode(mode);
         }
     }
@@ -239,7 +291,6 @@ public class PenUtils {
             logError("onStylusModeChanged called before setup — ignoring");
             return;
         }
-        // Register or unregister the listener based on the combined (stylus || force) state.
         updateListenerState();
         refreshPenMode();
     }
@@ -251,14 +302,44 @@ public class PenUtils {
             return;
         }
         updateListenerState();
-        // Only re-evaluate pen mode when Stylus Mode is also on.
-        boolean stylusModeEnabled = mPreferences != null
-                && mPreferences.getBoolean(STYLUS_MODE_KEY, false);
-        if (stylusModeEnabled) {
-            refreshPenMode();
-        } else {
-            logInfo("Stylus Mode is off — force recognize change has no pen effect");
+        // Force mode is independent — always re-evaluate
+        refreshPenMode();
+    }
+
+    public static void onRestoreOnDockChanged(boolean enabled) {
+        logInfo("Restore on dock setting → " + enabled);
+        if (!mIsSetup) {
+            logError("onRestoreOnDockChanged called before setup — ignoring");
+            return;
         }
+        refreshPenMode();
+    }
+
+    /**
+     * General settings-change notification triggered by broadcast from PipaCore.
+     */
+    public static void onSettingsChanged() {
+        logInfo("Settings changed broadcast processed");
+        if (!mIsSetup || mPreferences == null) return;
+        mCurrentRefreshMode = mPreferences.getString(STYLUS_REFRESH_RATE_KEY, "dynamic");
+        updateListenerState();
+        refreshPenMode();
+    }
+
+    /**
+     * Called by PenChargingService when the pen's dock/charging state changes.
+     * When the pen is placed on the magnetic charging dock, we can optionally
+     * restore the default refresh rate (144Hz) since the user isn't drawing.
+     */
+    public static void onDockStateChanged(boolean isDocked) {
+        if (mIsDocked == isDocked) return; // no change
+        logInfo("Dock state → " + (isDocked ? "docked" : "undocked"));
+        mIsDocked = isDocked;
+        if (!mIsSetup) {
+            logError("onDockStateChanged called before setup — ignoring");
+            return;
+        }
+        refreshPenMode();
     }
 
     // -----------------------------------------------------------------------
@@ -316,7 +397,31 @@ public class PenUtils {
 
     public static boolean isPenConnected()       { return mIsPenConnected; }
     public static boolean isPenModeEnabled()     { return mPenModeEnabled; }
+    public static boolean isDocked()             { return mIsDocked; }
     public static String  getCurrentRefreshMode(){ return mCurrentRefreshMode; }
+
+    /**
+     * Returns a human-readable status string for the current state.
+     */
+    public static String getStatusText() {
+        if (mPreferences == null) return "Not initialized";
+        boolean forceOn  = mPreferences.getBoolean(FORCE_STYLUS_KEY, false);
+        boolean stylusOn = mPreferences.getBoolean(STYLUS_MODE_KEY, false);
+
+        if (!stylusOn) {
+            return "Off";
+        } else if (forceOn && mPenModeEnabled) {
+            return "Force Active";
+        } else if (mPenModeEnabled) {
+            return "Active (Pen In Hand)";
+        } else if (mIsPenConnected && mIsDocked) {
+            return "Docked (Charging)";
+        } else if (!mIsPenConnected) {
+            return "Waiting (No Pen)";
+        } else {
+            return "Idle";
+        }
+    }
 
     /** Release all resources. Resets the setup flag so isSetup() returns false. */
     public static void cleanup() {

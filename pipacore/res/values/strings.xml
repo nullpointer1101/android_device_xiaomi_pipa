@@ -70,9 +70,16 @@
     <string name="stylus_summary">Stylus mode, refresh rate, and charging status</string>
     <string name="stylus_switch_title">Stylus Mode</string>
     <string name="stylus_switch_summary">Enable stylus hardware support and display synchronization</string>
+    <string name="stylus_mode_type_category">Pen Type &amp; Mode</string>
+    <string name="stylus_mode_official_title">Official Xiaomi Smart Pen</string>
+    <string name="stylus_mode_official_summary">Smart presence detection. Automatically switches to 120Hz in hand and restores 144Hz while docked</string>
+    <string name="restore_on_dock_title">Restore 144Hz on Dock</string>
+    <string name="restore_on_dock_summary">Revert to full 144Hz display while stylus is magnetically charging</string>
+    <string name="stylus_mode_force_title">Third-Party Pen / Force Mode</string>
+    <string name="stylus_mode_force_summary">Continuously forces pen digitizer and refresh rate without Bluetooth</string>
     <string name="force_stylus_switch_title">Force Recognize</string>
     <string name="force_stylus_switch_summary">Allows the official stylus to work without Bluetooth and enables third-party pen support</string>
-    <string name="stylus_refresh_rate_category">Display Refresh Rate</string>
+    <string name="stylus_refresh_rate_category">Display Refresh Rate Target</string>
     <string name="stylus_refresh_rate_title">Display Refresh Rate</string>
     <string name="stylus_refresh_rate_summary">Select refresh rate target during active pen usage</string>
     <string name="refresh_rate_dynamic">Dynamic (60/120Hz)</string>
@@ -83,6 +90,17 @@
     <string name="refresh_rate_120hz_summary">Locks display refresh rate to 120Hz for minimum input latency</string>
     <string name="stylus_charging_notification_title">Stylus Charging Notification</string>
     <string name="stylus_charging_notification_summary">Show persistent notification and charging pill while wirelessly docked</string>
+    <string name="stylus_status_category">Status</string>
+    <string name="stylus_status_disabled_title">Stylus Mode Disabled</string>
+    <string name="stylus_status_disabled_desc">Display running at default (144Hz) • Zero background overhead</string>
+    <string name="stylus_status_force_title">Force Mode Active</string>
+    <string name="stylus_status_force_desc">Pen digitizer active • Display target: %s</string>
+    <string name="stylus_status_active_title">Active in Hand</string>
+    <string name="stylus_status_active_desc">Pen digitizer active • Display target: %s</string>
+    <string name="stylus_status_docked_title">Docked &amp; Charging</string>
+    <string name="stylus_status_docked_desc">Display restored to 144Hz while magnetically charging</string>
+    <string name="stylus_status_disconnected_title">Waiting for Stylus</string>
+    <string name="stylus_status_disconnected_desc">Stylus not connected • Display running at 144Hz</string>
     <string name="stylus_info_footer">Stylus Mode configures pen-compatible touch scanning and refresh rates. Disabling it when not using a pen guarantees zero background polling or battery drain.</string>
 
     <!-- Xiaomi Keyboard -->
