@@ -121,16 +121,22 @@ on property:sys.pipacore.profile=0
     write /sys/devices/system/cpu/cpufreq/policy0/scaling_max_freq 1804800
     write /sys/devices/system/cpu/cpufreq/policy0/schedutil/up_rate_limit_us 1000
     write /sys/devices/system/cpu/cpufreq/policy0/schedutil/down_rate_limit_us 20000
+    write /sys/devices/system/cpu/cpufreq/policy0/schedutil/hispeed_freq 1516800
+    write /sys/devices/system/cpu/cpufreq/policy0/schedutil/hispeed_load 90
     # Big Cluster (CPU 4-6)
     write /sys/devices/system/cpu/cpufreq/policy4/scaling_min_freq 710400
     write /sys/devices/system/cpu/cpufreq/policy4/scaling_max_freq 2419200
     write /sys/devices/system/cpu/cpufreq/policy4/schedutil/up_rate_limit_us 1000
     write /sys/devices/system/cpu/cpufreq/policy4/schedutil/down_rate_limit_us 20000
+    write /sys/devices/system/cpu/cpufreq/policy4/schedutil/hispeed_freq 1958400
+    write /sys/devices/system/cpu/cpufreq/policy4/schedutil/hispeed_load 90
     # Prime Cluster (CPU 7)
     write /sys/devices/system/cpu/cpufreq/policy7/scaling_min_freq 844800
     write /sys/devices/system/cpu/cpufreq/policy7/scaling_max_freq 3187200
     write /sys/devices/system/cpu/cpufreq/policy7/schedutil/up_rate_limit_us 1000
     write /sys/devices/system/cpu/cpufreq/policy7/schedutil/down_rate_limit_us 20000
+    write /sys/devices/system/cpu/cpufreq/policy7/schedutil/hispeed_freq 2419200
+    write /sys/devices/system/cpu/cpufreq/policy7/schedutil/hispeed_load 95
     # GPU Default Scaling
     write /sys/class/kgsl/kgsl-3d0/max_gpuclk 670000000
     write /sys/class/kgsl/kgsl-3d0/devfreq/max_freq 670000000
@@ -146,16 +152,22 @@ on property:sys.pipacore.profile=1
     write /sys/devices/system/cpu/cpufreq/policy0/scaling_max_freq 1228800
     write /sys/devices/system/cpu/cpufreq/policy0/schedutil/up_rate_limit_us 5000
     write /sys/devices/system/cpu/cpufreq/policy0/schedutil/down_rate_limit_us 5000
+    write /sys/devices/system/cpu/cpufreq/policy0/schedutil/hispeed_freq 1228800
+    write /sys/devices/system/cpu/cpufreq/policy0/schedutil/hispeed_load 95
     # Big Cluster (CPU 4-6) - cap max to 1574400
     write /sys/devices/system/cpu/cpufreq/policy4/scaling_min_freq 710400
     write /sys/devices/system/cpu/cpufreq/policy4/scaling_max_freq 1574400
     write /sys/devices/system/cpu/cpufreq/policy4/schedutil/up_rate_limit_us 5000
     write /sys/devices/system/cpu/cpufreq/policy4/schedutil/down_rate_limit_us 5000
+    write /sys/devices/system/cpu/cpufreq/policy4/schedutil/hispeed_freq 1478400
+    write /sys/devices/system/cpu/cpufreq/policy4/schedutil/hispeed_load 95
     # Prime Cluster (CPU 7) - strictly capped to 1190400
     write /sys/devices/system/cpu/cpufreq/policy7/scaling_min_freq 844800
     write /sys/devices/system/cpu/cpufreq/policy7/scaling_max_freq 1190400
     write /sys/devices/system/cpu/cpufreq/policy7/schedutil/up_rate_limit_us 5000
     write /sys/devices/system/cpu/cpufreq/policy7/schedutil/down_rate_limit_us 5000
+    write /sys/devices/system/cpu/cpufreq/policy7/schedutil/hispeed_freq 1190400
+    write /sys/devices/system/cpu/cpufreq/policy7/schedutil/hispeed_load 95
     # GPU Cap for power saving
     write /sys/class/kgsl/kgsl-3d0/max_gpuclk 443000000
     write /sys/class/kgsl/kgsl-3d0/devfreq/max_freq 443000000
@@ -171,16 +183,22 @@ on property:sys.pipacore.profile=10
     write /sys/devices/system/cpu/cpufreq/policy0/scaling_min_freq 1075200
     write /sys/devices/system/cpu/cpufreq/policy0/schedutil/up_rate_limit_us 500
     write /sys/devices/system/cpu/cpufreq/policy0/schedutil/down_rate_limit_us 40000
+    write /sys/devices/system/cpu/cpufreq/policy0/schedutil/hispeed_freq 1516800
+    write /sys/devices/system/cpu/cpufreq/policy0/schedutil/hispeed_load 90
     # Big Cluster (CPU 4-6) - uncap to max (2419200), raise min to 1574400
     write /sys/devices/system/cpu/cpufreq/policy4/scaling_max_freq 2419200
     write /sys/devices/system/cpu/cpufreq/policy4/scaling_min_freq 1574400
     write /sys/devices/system/cpu/cpufreq/policy4/schedutil/up_rate_limit_us 500
     write /sys/devices/system/cpu/cpufreq/policy4/schedutil/down_rate_limit_us 40000
+    write /sys/devices/system/cpu/cpufreq/policy4/schedutil/hispeed_freq 1958400
+    write /sys/devices/system/cpu/cpufreq/policy4/schedutil/hispeed_load 90
     # Prime Cluster (CPU 7) - uncap to max (3187200), raise min to 1766400
     write /sys/devices/system/cpu/cpufreq/policy7/scaling_max_freq 3187200
     write /sys/devices/system/cpu/cpufreq/policy7/scaling_min_freq 1766400
     write /sys/devices/system/cpu/cpufreq/policy7/schedutil/up_rate_limit_us 500
     write /sys/devices/system/cpu/cpufreq/policy7/schedutil/down_rate_limit_us 40000
+    write /sys/devices/system/cpu/cpufreq/policy7/schedutil/hispeed_freq 2419200
+    write /sys/devices/system/cpu/cpufreq/policy7/schedutil/hispeed_load 95
     # GPU Uncapped Maximum
     write /sys/class/kgsl/kgsl-3d0/max_gpuclk 670000000
     write /sys/class/kgsl/kgsl-3d0/devfreq/max_freq 670000000
